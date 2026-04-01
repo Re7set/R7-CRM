@@ -37,12 +37,12 @@ interface CRMContextType {
   notifications: CRMNotification[];
 
   // Client CRUD
-  addClient: (client: Partial<Client> & { name: string }) => void;
+  addClient: (client: Partial<Client> & { name: string }) => Promise<Client>;
   updateClient: (id: string, updates: Partial<Client>) => void;
   deleteClient: (id: string) => void;
 
   // Contact CRUD
-  addContact: (contact: Partial<Contact> & { first_name: string; last_name: string }) => void;
+  addContact: (contact: Partial<Contact> & { first_name: string; last_name: string }) => Promise<Contact>;
   updateContact: (id: string, updates: Partial<Contact>) => void;
   deleteContact: (id: string) => void;
 
@@ -129,8 +129,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const addNotificationMut = useAddNotification();
 
   // Actions
-  const addClient = useCallback((client: Partial<Client> & { name: string }) => {
-    addClientMut.mutate(client);
+  const addClient = useCallback(async (client: Partial<Client> & { name: string }) => {
+    const result = await addClientMut.mutateAsync(client);
+    return result;
   }, [addClientMut]);
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
@@ -143,8 +144,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     setSelectedClient(prev => prev?.id === id ? null : prev);
   }, [deleteClientMut]);
 
-  const addContact = useCallback((contact: Partial<Contact> & { first_name: string; last_name: string }) => {
-    addContactMut.mutate(contact);
+  const addContact = useCallback(async (contact: Partial<Contact> & { first_name: string; last_name: string }) => {
+    const result = await addContactMut.mutateAsync(contact);
+    return result;
   }, [addContactMut]);
 
   const updateContact = useCallback((id: string, updates: Partial<Contact>) => {
@@ -169,6 +171,14 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       const rules = assignmentRules.filter(r => r.stage === updates.stage && r.is_active);
       if (rules.length > 0) {
         updates = { ...updates, assigned_to: rules[0].team_member_id };
+      }
+
+      // Auto-promote client to "active" (Client) when deal is signed
+      if (updates.stage === 'Signé') {
+        const deal = deals.find(d => d.id === id);
+        if (deal?.client_id) {
+          updateClientMut.mutate({ id: deal.client_id, updates: { status: 'active' as ClientStatus } });
+        }
       }
 
       // Notify Stan on Visio/Closing

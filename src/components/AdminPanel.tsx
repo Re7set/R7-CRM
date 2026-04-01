@@ -5,7 +5,8 @@ import { useAuth } from './AuthProvider';
 import { formatCurrency } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Save, Plus, Trash2, Download, KeyRound, Tag, Pencil, Webhook } from 'lucide-react';
+import { Save, Plus, Trash2, Download, KeyRound, Tag, Pencil, Webhook, Package } from 'lucide-react';
+import { useServicesQuery, useAddService, useUpdateService, useDeleteService } from '@/hooks/useSupabaseQueries';
 import { toast } from 'sonner';
 
 interface TagItem {
@@ -159,6 +160,9 @@ export default function AdminPanel() {
         </div>
       </section>
 
+      {/* Services */}
+      <ServicesSection />
+
       {/* Mot de passe */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
@@ -241,5 +245,97 @@ export default function AdminPanel() {
         </Button>
       </section>
     </div>
+  );
+}
+
+function ServicesSection() {
+  const { data: services = [] } = useServicesQuery();
+  const addService = useAddService();
+  const updateService = useUpdateService();
+  const deleteService = useDeleteService();
+
+  const [newName, setNewName] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    addService.mutate({ name: newName.trim(), category: newCategory.trim(), description: newDesc.trim() });
+    setNewName(''); setNewCategory(''); setNewDesc('');
+    toast.success('Service créé');
+  };
+
+  const startEdit = (s: typeof services[0]) => {
+    setEditing(s.id); setEditName(s.name); setEditCategory(s.category); setEditDesc(s.description);
+  };
+
+  const saveEdit = () => {
+    if (!editing || !editName.trim()) return;
+    updateService.mutate({ id: editing, updates: { name: editName.trim(), category: editCategory.trim(), description: editDesc.trim() } });
+    setEditing(null);
+    toast.success('Service mis à jour');
+  };
+
+  const categories = [...new Set(services.map(s => s.category).filter(Boolean))];
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Package className="w-4 h-4 text-primary" />
+        <h2 className="text-base font-bold text-foreground">Services</h2>
+        <span className="text-xs text-muted-foreground">({services.length})</span>
+      </div>
+      <div className="bg-card rounded-lg border border-border divide-y divide-border/40">
+        {services.map(s => (
+          <div key={s.id} className="flex items-center gap-3 px-5 py-2.5">
+            {editing === s.id ? (
+              <div className="flex-1 space-y-2">
+                <div className="flex gap-2">
+                  <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-7 text-sm flex-1" placeholder="Nom" autoFocus />
+                  <Input value={editCategory} onChange={e => setEditCategory(e.target.value)} className="h-7 text-sm w-[120px]" placeholder="Catégorie" />
+                </div>
+                <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} className="h-7 text-sm" placeholder="Description" />
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={saveEdit}><Save className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(null)}>Annuler</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{s.name}</span>
+                    {s.category && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{s.category}</span>}
+                  </div>
+                  {s.description && <p className="text-[11px] text-muted-foreground truncate">{s.description}</p>}
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => startEdit(s)}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => { deleteService.mutate(s.id); toast.success('Service supprimé'); }}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            )}
+          </div>
+        ))}
+        <div className="px-5 py-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Input placeholder="Nom du service..." value={newName} onChange={e => setNewName(e.target.value)} className="h-8 text-sm flex-1" />
+            <Input placeholder="Catégorie" value={newCategory} onChange={e => setNewCategory(e.target.value)} className="h-8 text-sm w-[120px]" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Input placeholder="Description (optionnel)" value={newDesc} onChange={e => setNewDesc(e.target.value)} className="h-8 text-sm flex-1" onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+            <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={handleAdd}>
+              <Plus className="w-3.5 h-3.5" /> Ajouter
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

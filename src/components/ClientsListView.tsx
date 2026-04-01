@@ -1,5 +1,5 @@
 import { useCRM } from './CRMProvider';
-import { getClientStatusBadgeClass, CLIENT_STATUSES, ClientStatus, formatCurrency } from '@/lib/types';
+import { getClientStatusBadgeClass, CLIENT_STATUSES, CLIENT_STATUS_LABELS, ClientStatus, formatCurrency } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,12 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2 } from 'lucide-react';
 
-const statusLabels: Record<ClientStatus, string> = {
-  prospect: 'Prospect',
-  active: 'Actif',
-  inactive: 'Inactif',
-  churned: 'Perdu',
-};
+const statusLabels = CLIENT_STATUS_LABELS;
 
 export default function ClientsListView() {
   const { clients, deals, searchQuery, filterClientStatus, updateClient, deleteClient, setSelectedClient } = useCRM();

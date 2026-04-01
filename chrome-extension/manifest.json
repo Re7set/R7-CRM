@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "RE7SET CRM - Quick Add",
+  "version": "1.0.0",
+  "description": "Ajouter rapidement un client/contact au CRM RE7SET depuis n'importe quel site",
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon48.png"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scraper.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

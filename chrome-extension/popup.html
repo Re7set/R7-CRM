@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RE7SET CRM</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 360px; background: #fafafa; color: #1a1a1a; }
+    .header { padding: 14px 16px; background: linear-gradient(135deg, #1e293b, #334155); color: white; display: flex; align-items: center; gap: 10px; }
+    .header .logo { font-weight: 800; font-size: 16px; letter-spacing: -0.5px; }
+    .header .sub { font-size: 11px; opacity: 0.6; }
+    .status { padding: 8px 16px; font-size: 11px; background: #f0fdf4; color: #16a34a; border-bottom: 1px solid #e5e7eb; display: none; align-items: center; gap: 6px; }
+    .status.error { background: #fef2f2; color: #dc2626; }
+    .status.show { display: flex; }
+    .section { padding: 12px 16px; }
+    .section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #94a3b8; font-weight: 600; margin-bottom: 8px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; font-size: 11px; color: #64748b; margin-bottom: 3px; font-weight: 500; }
+    .field input, .field select, .field textarea { width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; background: white; color: #1a1a1a; outline: none; transition: border-color 0.2s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+    .field textarea { resize: none; height: 50px; }
+    .row { display: flex; gap: 8px; }
+    .row .field { flex: 1; }
+    .divider { height: 1px; background: #e5e7eb; margin: 4px 16px; }
+    .actions { padding: 12px 16px; display: flex; gap: 8px; }
+    .btn { flex: 1; padding: 9px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-primary { background: #1e293b; color: white; }
+    .btn-primary:hover { background: #334155; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #f1f5f9; color: #475569; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; background: #eff6ff; color: #3b82f6; }
+    .scraped-info { padding: 8px 16px; font-size: 11px; color: #94a3b8; background: #f8fafc; border-bottom: 1px solid #e5e7eb; }
+    .config-link { padding: 8px 16px; text-align: center; }
+    .config-link a { font-size: 11px; color: #3b82f6; text-decoration: none; }
+    .config-link a:hover { text-decoration: underline; }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">RE7SET CRM</div>
+      <div class="sub">Quick Add</div>
+    </div>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <div class="scraped-info" id="scraped-info" style="display:none">
+    Pré-rempli depuis la page actuelle
+  </div>
+
+  <div class="section">
+    <div class="section-title">Client / Entreprise</div>
+    <div class="field">
+      <label>Nom du cabinet / entreprise</label>
+      <input type="text" id="clientName" placeholder="Ex: Cabinet Dupont & Associés">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Profession</label>
+        <select id="profession">
+          <option value="">Non défini</option>
+          <option value="avocat">Avocat</option>
+          <option value="notaire">Notaire</option>
+          <option value="commissaire_de_justice">Commissaire de justice</option>
+          <option value="expert_comptable">Expert-comptable</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Barreau / Ordre</label>
+        <input type="text" id="barreau" placeholder="Ex: Paris">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="contact@...">
+      </div>
+      <div class="field">
+        <label>Téléphone</label>
+        <input type="tel" id="phone" placeholder="01 23 45 67 89">
+      </div>
+    </div>
+    <div class="field">
+      <label>Site web</label>
+      <input type="url" id="website" placeholder="https://...">
+    </div>
+    <div class="field">
+      <label>Adresse</label>
+      <input type="text" id="address" placeholder="12 rue de...">
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="section-title">Contact principal (optionnel)</div>
+    <div class="row">
+      <div class="field">
+        <label>Prénom</label>
+        <input type="text" id="contactFirst" placeholder="Jean">
+      </div>
+      <div class="field">
+        <label>Nom</label>
+        <input type="text" id="contactLast" placeholder="Dupont">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Fonction</label>
+        <input type="text" id="contactRole" placeholder="Associé fondateur">
+      </div>
+      <div class="field">
+        <label>Email contact</label>
+        <input type="email" id="contactEmail" placeholder="">
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <div class="section-title">Options deal</div>
+    <div class="row">
+      <div class="field">
+        <label>Créer un deal ?</label>
+        <select id="createDeal">
+          <option value="yes">Oui, créer un deal</option>
+          <option value="no">Non, client uniquement</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Source</label>
+        <select id="source">
+          <option value="cold_email">Cold email</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="referral">Referral</option>
+          <option value="other">Autre</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-secondary" id="btnClear">Effacer</button>
+    <button class="btn btn-primary" id="btnSave">
+      Ajouter au CRM
+    </button>
+  </div>
+
+  <div class="config-link">
+    <a href="#" id="openCRM">Ouvrir le CRM</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -145,6 +145,15 @@ export interface DealOnboardingItem {
   created_at: string;
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Notification {
   id: string;
   team_member_id: string;
@@ -205,6 +214,13 @@ const stageColorMap: Record<DealStage, string> = {
 export function getStageBadgeClass(stage: DealStage): string {
   return stageColorMap[stage] || 'bg-muted text-muted-foreground';
 }
+
+export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
+  'prospect': 'Prospect',
+  'active': 'Client',
+  'inactive': 'Inactif',
+  'churned': 'Perdu',
+};
 
 const clientStatusColorMap: Record<ClientStatus, string> = {
   'prospect': 'bg-blue-500/15 text-blue-700 dark:text-blue-300',

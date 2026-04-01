@@ -1,5 +1,5 @@
 import { useCRM } from './CRMProvider';
-import { CLIENT_STATUSES, ClientStatus, formatCurrency, getClientStatusBadgeClass } from '@/lib/types';
+import { CLIENT_STATUSES, CLIENT_STATUS_LABELS, ClientStatus, formatCurrency, getClientStatusBadgeClass } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,14 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Handshake, Users } from 'lucide-react';
+import { Trash2, Handshake, Users, Plus } from 'lucide-react';
 
-const statusLabels: Record<ClientStatus, string> = {
-  prospect: 'Prospect', active: 'Actif', inactive: 'Inactif', churned: 'Perdu',
-};
+const statusLabels = CLIENT_STATUS_LABELS;
 
 export default function ClientDetailModal() {
-  const { selectedClient, setSelectedClient, updateClient, deleteClient, contacts, deals, setSelectedDeal, setSelectedContact } = useCRM();
+  const { selectedClient, setSelectedClient, updateClient, deleteClient, contacts, deals, addDeal, addContact, setSelectedDeal, setSelectedContact } = useCRM();
 
   if (!selectedClient) return null;
   const client = selectedClient;
@@ -77,9 +75,21 @@ export default function ClientDetailModal() {
 
             {/* Contacts */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Contacts ({clientContacts.length})</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Contacts ({clientContacts.length})</span>
+                </div>
+                <Button
+                  variant="ghost" size="sm" className="h-6 text-xs gap-1 text-muted-foreground hover:text-primary"
+                  onClick={async () => {
+                    const contact = await addContact({ first_name: 'Nouveau', last_name: 'Contact', client_id: client.id });
+                    setSelectedClient(null);
+                    setTimeout(() => setSelectedContact(contact), 100);
+                  }}
+                >
+                  <Plus className="w-3 h-3" /> Ajouter
+                </Button>
               </div>
               {clientContacts.length > 0 ? (
                 <div className="space-y-1">
@@ -98,9 +108,21 @@ export default function ClientDetailModal() {
 
             {/* Deals */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Handshake className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Deals ({clientDeals.length})</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Handshake className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Deals ({clientDeals.length})</span>
+                </div>
+                <Button
+                  variant="ghost" size="sm" className="h-6 text-xs gap-1 text-muted-foreground hover:text-primary"
+                  onClick={async () => {
+                    const deal = await addDeal({ name: client.name, client_id: client.id, value: 0, stage: 'Réponse positive' as any });
+                    setSelectedClient(null);
+                    setTimeout(() => setSelectedDeal(deal), 100);
+                  }}
+                >
+                  <Plus className="w-3 h-3" /> Créer deal
+                </Button>
               </div>
               {clientDeals.length > 0 ? (
                 <div className="space-y-1">

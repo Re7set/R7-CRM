@@ -51,7 +51,7 @@ export default function AppSidebar() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar">
+    <Sidebar collapsible="icon" variant="floating" className="border-none shadow-sm dark:shadow-none hidden md:flex">
       <SidebarHeader className="p-3">
         <div className="flex items-center gap-2.5 px-1">
           <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-border flex items-center justify-center shrink-0 overflow-hidden">

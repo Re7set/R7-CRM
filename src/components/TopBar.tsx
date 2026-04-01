@@ -1,5 +1,5 @@
 import { useCRM } from './CRMProvider';
-import { DEAL_STAGES, CLIENT_STATUSES, PROFESSIONS, DealStage, ClientStatus, Profession, PROFESSION_LABELS } from '@/lib/types';
+import { DEAL_STAGES, CLIENT_STATUSES, CLIENT_STATUS_LABELS, PROFESSIONS, DealStage, ClientStatus, Profession, PROFESSION_LABELS } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useTags } from '@/hooks/useTagsComments';
 import NotificationBell from './NotificationBell';
 
-const statusLabels: Record<ClientStatus, string> = {
-  prospect: 'Prospect',
-  active: 'Actif',
-  inactive: 'Inactif',
-  churned: 'Perdu',
-};
+const statusLabels = CLIENT_STATUS_LABELS;
 
 export default function TopBar() {
   const {
@@ -26,7 +21,8 @@ export default function TopBar() {
     filterProfession, setFilterProfession,
     resetFilters,
     addDeal, setSelectedDeal,
-    addClient, addContact,
+    addClient, setSelectedClient,
+    addContact, setSelectedContact,
   } = useCRM();
   const { tags } = useTags();
 
@@ -40,9 +36,11 @@ export default function TopBar() {
 
   const handleAdd = async () => {
     if (viewMode === 'clients') {
-      addClient({ name: 'Nouveau client' });
+      const client = await addClient({ name: 'Nouveau client' });
+      setSelectedClient(client);
     } else if (viewMode === 'contacts') {
-      addContact({ first_name: 'Nouveau', last_name: 'Contact' });
+      const contact = await addContact({ first_name: 'Nouveau', last_name: 'Contact' });
+      setSelectedContact(contact);
     } else if (viewMode === 'deals' || viewMode === 'pipeline') {
       const deal = await addDeal({ name: 'Nouveau deal', value: 0, stage: 'Réponse positive' as DealStage });
       setSelectedDeal(deal);
@@ -50,26 +48,26 @@ export default function TopBar() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-card border-b border-border">
-      <SidebarTrigger className="h-8 w-8 sm:h-7 sm:w-7" />
-      <Separator orientation="vertical" className="h-4 hidden sm:block" />
+    <div className="flex flex-wrap items-center gap-2 sm:gap-4 px-4 sm:px-6 h-14 bg-background/80 backdrop-blur-xl sticky top-0 z-40 border-b border-border/40">
+      <SidebarTrigger className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors" />
+      <Separator orientation="vertical" className="h-5 hidden sm:block bg-border/50" />
 
       {/* Search */}
-      <div className="relative hidden sm:block">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+      <div className="relative hidden sm:block w-[240px] group">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher..."
-          className="h-7 w-[180px] pl-7 text-xs"
+          placeholder="Rechercher (Cmd+K)"
+          className="h-9 w-full pl-9 pr-4 text-sm rounded-full bg-secondary/30 border-transparent hover:bg-secondary/50 focus-visible:bg-secondary focus-visible:ring-1 focus-visible:ring-primary/30 transition-all"
         />
       </div>
 
       {/* Desktop filters */}
-      <div className="hidden sm:contents">
+      <div className="hidden sm:flex items-center gap-2">
         {showStatusFilter && (
           <Select value={filterClientStatus} onValueChange={(v) => setFilterClientStatus(v as ClientStatus | 'all')}>
-            <SelectTrigger className="h-7 w-[110px] text-xs rounded border-border">
+            <SelectTrigger className="h-9 w-[130px] text-sm rounded-full bg-secondary/30 border-transparent hover:bg-secondary/50 transition-colors">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
@@ -81,7 +79,7 @@ export default function TopBar() {
 
         {showStageFilter && (
           <Select value={filterStage} onValueChange={(v) => setFilterStage(v as DealStage | 'all')}>
-            <SelectTrigger className="h-7 w-[140px] text-xs rounded border-border">
+            <SelectTrigger className="h-9 w-[140px] text-sm rounded-full bg-secondary/30 border-transparent hover:bg-secondary/50 transition-colors">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent>
@@ -93,7 +91,7 @@ export default function TopBar() {
 
         {showProfessionFilter && (
           <Select value={filterProfession} onValueChange={(v) => setFilterProfession(v as Profession | 'all')}>
-            <SelectTrigger className="h-7 w-[140px] text-xs rounded border-border">
+            <SelectTrigger className="h-9 w-[140px] text-sm rounded-full bg-secondary/30 border-transparent hover:bg-secondary/50 transition-colors">
               <SelectValue placeholder="Profession" />
             </SelectTrigger>
             <SelectContent>
@@ -105,7 +103,7 @@ export default function TopBar() {
 
         {tags.length > 0 && (
           <Select value={filterTag} onValueChange={(v) => setFilterTag(v)}>
-            <SelectTrigger className="h-7 w-[110px] text-xs rounded border-border">
+            <SelectTrigger className="h-9 w-[130px] text-sm rounded-full bg-secondary/30 border-transparent hover:bg-secondary/50 transition-colors">
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent>
@@ -123,8 +121,8 @@ export default function TopBar() {
         )}
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={resetFilters} title="Réinitialiser">
-            <X className="w-3.5 h-3.5" />
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors ml-1" onClick={resetFilters} title="Reinitialiser">
+            <X className="w-4 h-4" />
           </Button>
         )}
       </div>
@@ -165,10 +163,10 @@ export default function TopBar() {
 
       {/* Add button */}
       {showAddButton && (
-        <Button variant="default" size="sm" className="h-8 sm:h-7 text-xs gap-1" onClick={handleAdd}>
-          <Plus className="w-3.5 h-3.5" />
+        <Button variant="default" size="sm" className="h-9 rounded-full px-4 text-sm font-medium tracking-wide shadow-md hover:shadow-lg transition-all gap-1.5" onClick={handleAdd}>
+          <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">
-            {viewMode === 'clients' ? 'Client' : viewMode === 'contacts' ? 'Contact' : 'Deal'}
+            Créer {viewMode === 'clients' ? 'Client' : viewMode === 'contacts' ? 'Contact' : 'Deal'}
           </span>
         </Button>
       )}

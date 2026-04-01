@@ -294,6 +294,42 @@ export type Database = {
           },
         ]
       }
+      deal_services: {
+        Row: {
+          created_at: string | null
+          deal_id: string
+          id: string
+          service_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deal_id: string
+          id?: string
+          service_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deal_id?: string
+          id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_services_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_tags: {
         Row: {
           created_at: string | null
@@ -523,6 +559,33 @@ export type Database = {
           name?: string
           position?: number
           visible?: boolean | null
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

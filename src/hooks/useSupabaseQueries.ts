@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Client, Contact, Deal, Activity, PipelineStage, DealStage, ClientStatus, ActivityType, TeamMember, AssignmentRule, Notification, OnboardingTemplate, DealOnboardingItem } from '@/lib/types';
+import type { Client, Contact, Deal, Activity, PipelineStage, DealStage, ClientStatus, ActivityType, TeamMember, AssignmentRule, Notification, OnboardingTemplate, DealOnboardingItem, Service } from '@/lib/types';
 
 // ── Clients ─────────────────────────────────────────────────
 
@@ -432,5 +432,86 @@ export function useToggleOnboardingItem() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['deal_onboarding_items', vars.dealId] });
     },
+  });
+}
+
+// ── Services ───────────────────────────────────────────────
+
+export function useServicesQuery() {
+  return useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('services').select('*').order('category').order('name');
+      if (error) throw error;
+      return (data ?? []) as Service[];
+    },
+  });
+}
+
+export function useAddService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (service: { name: string; description?: string; category?: string }) => {
+      const { data, error } = await supabase.from('services').insert(service).select().single();
+      if (error) throw error;
+      return data as Service;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['services'] }); },
+  });
+}
+
+export function useUpdateService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Service> }) => {
+      const { error } = await supabase.from('services').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['services'] }); },
+  });
+}
+
+export function useDeleteService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('services').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['services'] }); },
+  });
+}
+
+export function useDealServicesQuery(dealId: string | null) {
+  return useQuery({
+    queryKey: ['deal_services', dealId],
+    enabled: !!dealId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('deal_services').select('service_id').eq('deal_id', dealId!);
+      if (error) throw error;
+      return (data ?? []).map(d => d.service_id) as string[];
+    },
+  });
+}
+
+export function useAddDealService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ dealId, serviceId }: { dealId: string; serviceId: string }) => {
+      const { error } = await supabase.from('deal_services').insert({ deal_id: dealId, service_id: serviceId });
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: ['deal_services', vars.dealId] }); },
+  });
+}
+
+export function useRemoveDealService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ dealId, serviceId }: { dealId: string; serviceId: string }) => {
+      const { error } = await supabase.from('deal_services').delete().eq('deal_id', dealId).eq('service_id', serviceId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: ['deal_services', vars.dealId] }); },
   });
 }

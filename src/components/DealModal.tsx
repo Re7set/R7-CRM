@@ -7,7 +7,7 @@ import {
   WARM_STATUS_LABELS, getWarmStatusBadgeClass,
 } from '@/lib/types';
 import { useTags, useDealTags } from '@/hooks/useTagsComments';
-import { useDealOnboardingItemsQuery, useInitializeOnboarding, useToggleOnboardingItem } from '@/hooks/useSupabaseQueries';
+import { useDealOnboardingItemsQuery, useInitializeOnboarding, useToggleOnboardingItem, useServicesQuery, useDealServicesQuery, useAddDealService, useRemoveDealService } from '@/hooks/useSupabaseQueries';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +20,8 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CalendarIcon, Trash2, Phone, Mail, Calendar as CalIcon, FileText, Plus, ExternalLink, CheckCircle2, ListChecks } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CalendarIcon, Trash2, Phone, Mail, Calendar as CalIcon, FileText, Plus, ExternalLink, CheckCircle2, ListChecks, ChevronDown, UserPlus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -32,12 +33,22 @@ const activityIcons: Record<string, any> = {
 };
 
 export default function DealModal() {
-  const { selectedDeal, setSelectedDeal, updateDeal, deleteDeal, clients, contacts, activities, addActivity, teamMembers } = useCRM();
+  const { selectedDeal, setSelectedDeal, updateDeal, deleteDeal, clients, contacts, activities, addActivity, addContact, teamMembers } = useCRM();
   const { tags } = useTags();
   const { tagIds, addTagToDeal, removeTagFromDeal } = useDealTags(selectedDeal?.id ?? null);
 
   const [newActivityType, setNewActivityType] = useState<ActivityType>('note');
   const [newActivityDesc, setNewActivityDesc] = useState('');
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [showNewContact, setShowNewContact] = useState(false);
+  const [newContactFirst, setNewContactFirst] = useState('');
+  const [newContactLast, setNewContactLast] = useState('');
+
+  // Services
+  const { data: allServices = [] } = useServicesQuery();
+  const { data: dealServiceIds = [] } = useDealServicesQuery(selectedDeal?.id ?? null);
+  const addDealService = useAddDealService();
+  const removeDealService = useRemoveDealService();
 
   // Onboarding
   const { data: onboardingItems = [] } = useDealOnboardingItemsQuery(selectedDeal?.id ?? null);
@@ -102,52 +113,7 @@ export default function DealModal() {
               )}
             </div>
 
-            {/* Infos métier */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Profession</label>
-                <Select value={deal.profession || '_none'} onValueChange={(v) => update({ profession: v === '_none' ? null : v as Profession })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Profession" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Non défini</SelectItem>
-                    {PROFESSIONS.map(p => <SelectItem key={p} value={p}>{PROFESSION_LABELS[p]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Barreau / Ordre</label>
-                <Input
-                  value={deal.barreau_ordre}
-                  onChange={(e) => update({ barreau_ordre: e.target.value })}
-                  placeholder="Ex: Paris, Lyon..."
-                  className="h-8 text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Type d'offre</label>
-                <Select value={deal.offer_type || '_none'} onValueChange={(v) => update({ offer_type: v === '_none' ? null : v as OfferType })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Offre" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Non défini</SelectItem>
-                    {OFFER_TYPES.map(o => <SelectItem key={o} value={o}>{OFFER_TYPE_LABELS[o]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Source</label>
-                <Select value={deal.source || 'other'} onValueChange={(v) => update({ source: v as DealSource })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {DEAL_SOURCES.map(s => <SelectItem key={s} value={s}>{DEAL_SOURCE_LABELS[s]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Client / Contact / Stage */}
+            {/* === ESSENTIELS === */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Client</label>
@@ -162,15 +128,37 @@ export default function DealModal() {
 
               <div className="space-y-1">
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Contact</label>
-                <Select value={deal.contact_id || '_none'} onValueChange={(v) => update({ contact_id: v === '_none' ? null : v })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Contact" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Aucun</SelectItem>
-                    {clientContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-1">
+                  <Select value={deal.contact_id || '_none'} onValueChange={(v) => update({ contact_id: v === '_none' ? null : v })}>
+                    <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Contact" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Aucun</SelectItem>
+                      {clientContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowNewContact(!showNewContact)} title="Créer un contact">
+                    <UserPlus className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
+            </div>
 
+            {/* Inline new contact form */}
+            {showNewContact && (
+              <div className="flex gap-2 items-end p-2 rounded-md bg-secondary/30">
+                <Input value={newContactFirst} onChange={e => setNewContactFirst(e.target.value)} placeholder="Prénom" className="h-8 text-xs flex-1" />
+                <Input value={newContactLast} onChange={e => setNewContactLast(e.target.value)} placeholder="Nom" className="h-8 text-xs flex-1" />
+                <Button size="sm" className="h-8 text-xs" disabled={!newContactFirst.trim() || !newContactLast.trim()} onClick={async () => {
+                  const contact = await addContact({ first_name: newContactFirst.trim(), last_name: newContactLast.trim(), client_id: deal.client_id });
+                  update({ contact_id: contact.id });
+                  setNewContactFirst(''); setNewContactLast(''); setShowNewContact(false);
+                }}>
+                  Ajouter
+                </Button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Stage</label>
                 <Select value={deal.stage} onValueChange={(v) => update({ stage: v as DealStage })}>
@@ -179,6 +167,16 @@ export default function DealModal() {
                     {DEAL_STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Valeur (EUR)</label>
+                <Input type="number" value={deal.value} onChange={(e) => update({ value: parseFloat(e.target.value) || 0 })} className="h-8 text-xs font-mono" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">MRR</label>
+                <Input type="number" value={deal.mrr} onChange={(e) => update({ mrr: parseFloat(e.target.value) || 0 })} className="h-8 text-xs font-mono" />
               </div>
 
               <div className="space-y-1">
@@ -193,114 +191,131 @@ export default function DealModal() {
               </div>
             </div>
 
-            {/* Financier */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Valeur (EUR)</label>
-                <Input
-                  type="number"
-                  value={deal.value}
-                  onChange={(e) => update({ value: parseFloat(e.target.value) || 0 })}
-                  className="h-8 text-xs font-mono"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">MRR</label>
-                <Input
-                  type="number"
-                  value={deal.mrr}
-                  onChange={(e) => update({ mrr: parseFloat(e.target.value) || 0 })}
-                  className="h-8 text-xs font-mono"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">MRR Cible</label>
-                <Input
-                  type="number"
-                  value={deal.mrr_cible}
-                  onChange={(e) => update({ mrr_cible: parseFloat(e.target.value) || 0 })}
-                  className="h-8 text-xs font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Date, Proba, Validation */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Date de close</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("h-8 w-full text-xs justify-start font-normal", !deal.expected_close_date && "text-muted-foreground")}>
-                      <CalendarIcon className="w-3 h-3 mr-1" />
-                      {deal.expected_close_date ? format(parseISO(deal.expected_close_date), 'd MMM yyyy', { locale: fr }) : 'Choisir'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={deal.expected_close_date ? parseISO(deal.expected_close_date) : undefined}
-                      onSelect={d => update({ expected_close_date: d ? format(d, 'yyyy-MM-dd') : '' })}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
-                  Probabilité {deal.probability}%
-                </label>
-                <Slider
-                  value={[deal.probability]}
-                  onValueChange={([v]) => update({ probability: v })}
-                  max={100}
-                  step={5}
-                  className="mt-2"
-                />
-              </div>
-            </div>
-
-            {/* Validation Sibyle + Lien audit */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={deal.sibyle_validation}
-                  onCheckedChange={(v) => update({ sibyle_validation: v })}
-                />
-                <label className="text-xs">Validation Sibyle</label>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Lien rapport audit</label>
-                <div className="flex gap-1">
-                  <Input
-                    value={deal.audit_report_url}
-                    onChange={(e) => update({ audit_report_url: e.target.value })}
-                    placeholder="https://..."
-                    className="h-8 text-xs flex-1"
-                  />
-                  {deal.audit_report_url && (
-                    <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" asChild>
-                      <a href={deal.audit_report_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </Button>
-                  )}
+            {/* Services */}
+            {allServices.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Services</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(() => {
+                    const categories = [...new Set(allServices.map(s => s.category).filter(Boolean))];
+                    return categories.map(cat => (
+                      <div key={cat} className="w-full">
+                        <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">{cat}</span>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {allServices.filter(s => s.category === cat).map(service => {
+                            const active = dealServiceIds.includes(service.id);
+                            return (
+                              <button
+                                key={service.id}
+                                onClick={() => active
+                                  ? removeDealService.mutate({ dealId: deal.id, serviceId: service.id })
+                                  : addDealService.mutate({ dealId: deal.id, serviceId: service.id })
+                                }
+                                title={service.description}
+                                className={cn(
+                                  'text-[11px] px-2.5 py-1 rounded-full border transition-all',
+                                  active ? 'bg-primary text-primary-foreground border-primary font-medium' : 'bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/60'
+                                )}
+                              >
+                                {service.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-1">
               <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Notes</label>
-              <Textarea
-                value={deal.notes}
-                onChange={(e) => update({ notes: e.target.value })}
-                placeholder="Notes sur ce deal..."
-                className="text-xs min-h-[60px] resize-none"
-              />
+              <Textarea value={deal.notes} onChange={(e) => update({ notes: e.target.value })} placeholder="Notes sur ce deal..." className="text-xs min-h-[60px] resize-none" />
             </div>
+
+            {/* === PLUS D'OPTIONS (collapsible) === */}
+            <Collapsible open={showMoreOptions} onOpenChange={setShowMoreOptions}>
+              <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full">
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", showMoreOptions && "rotate-180")} />
+                Plus d'options
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Profession</label>
+                    <Select value={deal.profession || '_none'} onValueChange={(v) => update({ profession: v === '_none' ? null : v as Profession })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Profession" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">Non défini</SelectItem>
+                        {PROFESSIONS.map(p => <SelectItem key={p} value={p}>{PROFESSION_LABELS[p]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Barreau / Ordre</label>
+                    <Input value={deal.barreau_ordre} onChange={(e) => update({ barreau_ordre: e.target.value })} placeholder="Ex: Paris, Lyon..." className="h-8 text-xs" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Type d'offre</label>
+                    <Select value={deal.offer_type || '_none'} onValueChange={(v) => update({ offer_type: v === '_none' ? null : v as OfferType })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Offre" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">Non défini</SelectItem>
+                        {OFFER_TYPES.map(o => <SelectItem key={o} value={o}>{OFFER_TYPE_LABELS[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Source</label>
+                    <Select value={deal.source || 'other'} onValueChange={(v) => update({ source: v as DealSource })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {DEAL_SOURCES.map(s => <SelectItem key={s} value={s}>{DEAL_SOURCE_LABELS[s]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">MRR Cible</label>
+                    <Input type="number" value={deal.mrr_cible} onChange={(e) => update({ mrr_cible: parseFloat(e.target.value) || 0 })} className="h-8 text-xs font-mono" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Date de close</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("h-8 w-full text-xs justify-start font-normal", !deal.expected_close_date && "text-muted-foreground")}>
+                          <CalendarIcon className="w-3 h-3 mr-1" />
+                          {deal.expected_close_date ? format(parseISO(deal.expected_close_date), 'd MMM yyyy', { locale: fr }) : 'Choisir'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={deal.expected_close_date ? parseISO(deal.expected_close_date) : undefined} onSelect={d => update({ expected_close_date: d ? format(d, 'yyyy-MM-dd') : '' })} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Probabilité {deal.probability}%</label>
+                    <Slider value={[deal.probability]} onValueChange={([v]) => update({ probability: v })} max={100} step={5} className="mt-2" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={deal.sibyle_validation} onCheckedChange={(v) => update({ sibyle_validation: v })} />
+                    <label className="text-xs">Validation Sibyle</label>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Lien rapport audit</label>
+                  <div className="flex gap-1">
+                    <Input value={deal.audit_report_url} onChange={(e) => update({ audit_report_url: e.target.value })} placeholder="https://..." className="h-8 text-xs flex-1" />
+                    {deal.audit_report_url && (
+                      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" asChild>
+                        <a href={deal.audit_report_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-3 h-3" /></a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Onboarding Checklist (Signé stage) */}
             {deal.stage === 'Signé' && (
